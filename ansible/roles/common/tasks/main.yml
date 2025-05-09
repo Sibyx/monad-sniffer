@@ -1,0 +1,24 @@
+---
+- name: Update APT cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+  register: upgrade_result
+  notify: Reboot if needed
+
+- name: Install common packages
+  apt:
+    name:
+      - git
+      - python3-pip
+      - unzip
+      - curl
+      - systemd
+      - iw
+      - net-tools
+      - wireless-tools
+    state: present

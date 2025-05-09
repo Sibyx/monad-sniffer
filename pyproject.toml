@@ -1,0 +1,18 @@
+[project]
+name = "monad-sniffer"
+version = "0.1.0"
+description = "Raspberry Pi AX210 Netwrok Sniffer"
+authors = [
+    {name = "Jakub Dubec",email = "jakub.dubec@stuba.sk"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ansible-core (>=2.18.5,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

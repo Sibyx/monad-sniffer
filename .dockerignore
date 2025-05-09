@@ -1,0 +1,9 @@
+.idea/
+.github/
+.git/
+.venv/
+*.DS_Store
+*.pyo
+.editorconfig
+.env
+.gitignore

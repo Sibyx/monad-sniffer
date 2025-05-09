@@ -1,0 +1,28 @@
+---
+- name: Install Bluetooth stack
+  apt:
+    name:
+      - bluetooth
+      - bluez
+      - rfkill
+    state: present
+
+- name: Ensure Bluetooth is unblocked
+  command: rfkill unblock bluetooth
+
+- name: Deploy BLE advertiser script
+  copy:
+    src: monad-ble.sh
+    dest: /usr/local/bin/monad-ble.sh
+    mode: '0755'
+
+- name: Deploy systemd service for BLE advertiser
+  template:
+    src: monad-ble.service.j2
+    dest: /etc/systemd/system/monad-ble.service
+
+- name: Enable and start BLE advertiser
+  systemd:
+    name: monad-ble
+    enabled: yes
+    state: started

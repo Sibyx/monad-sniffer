@@ -1,0 +1,9 @@
+---
+- name: Provision monad_sniffer node
+  hosts: all
+  become: true
+  roles:
+    - common
+    - ble
+#    - management
+#    - sniffer
