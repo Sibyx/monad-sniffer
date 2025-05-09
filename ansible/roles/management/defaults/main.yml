@@ -1,0 +1,12 @@
+---
+eth_iface: eth0
+wifi_iface: wlan0
+
+dhcp_subnet: 10.88.0.0
+dhcp_netmask: 255.255.255.0
+dhcp_range_start: 10.88.0.20
+dhcp_range_end: 10.88.0.200
+
+wifi_ssid: ""
+wifi_psk:  ""
+wifi_autoconnect: yes

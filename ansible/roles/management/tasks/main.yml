@@ -1,0 +1,47 @@
+---
+- name: Install management packages
+  apt:
+    name:
+      - dnsmasq
+      - network-manager
+    state: present
+    update_cache: yes
+
+- name: Drop dnsmasq config for Ethernet DHCP
+  template:
+    src: dnsmasq.conf.j2
+    dest: "/etc/dnsmasq.d/monad-{{ eth_iface }}.conf"
+    mode: '0644'
+  notify: Restart dnsmasq
+
+- name: Deploy NetworkManager Wi‑Fi connection
+  when: wifi_ssid | length > 0 and wifi_psk | length > 0
+  template:
+    src: monad-wifi.nmconnection.j2
+    dest: "/etc/NetworkManager/system-connections/{{ wifi_ssid }}.nmconnection"
+    mode: '0600'
+  notify:
+    - Reload NetworkManager
+
+- name: Deploy Wi‑Fi client systemd unit
+  template:
+    src: monad-wifi-client.service.j2
+    dest: /etc/systemd/system/monad-wifi-client.service
+    mode: '0644'
+  notify: daemon_reload
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Ensure dnsmasq disabled by default
+  systemd:
+    name: dnsmasq
+    enabled: false
+    state: stopped
+
+- name: Ensure NetworkManager is active
+  systemd:
+    name: NetworkManager
+    enabled: true
+    state: started

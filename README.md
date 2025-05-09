@@ -17,14 +17,6 @@ cd ansible
 ansible-playbook playbooks/provision.yml -l monad-sniffer-01
 ```
 
-To switch network modes:
-
-```bash
-sudo network-mode.sh dev
-sudo network-mode.sh prod
-sudo network-mode.sh wifi-on
-```
-
 ---
 Created with ❤️ using ☕️ for my kawaii PhD thesis on FIIT STU
 

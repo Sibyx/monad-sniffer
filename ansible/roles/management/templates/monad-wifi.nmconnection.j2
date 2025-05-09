@@ -1,0 +1,20 @@
+[connection]
+id={{ wifi_ssid }}
+uuid=b7f1c401-27b6-4067-b02b-f871f67c5600
+type=wifi
+interface-name={{ wifi_iface }}
+autoconnect={{ 'yes' if wifi_autoconnect | bool else 'no' }}
+
+[wifi]
+mode=infrastructure
+ssid={{ wifi_ssid }}
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk={{ wifi_psk }}
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=ignore

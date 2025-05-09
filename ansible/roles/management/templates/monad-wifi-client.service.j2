@@ -1,0 +1,10 @@
+[Unit]
+Description=WiFi Client Management service
+After=network.target NetworkManager.service
+ConditionPathExists=/usr/bin/nmcli
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nmcli radio wifi on
+ExecStop=/usr/bin/nmcli radio wifi off
+RemainAfterExit=yes

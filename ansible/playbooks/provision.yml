@@ -5,5 +5,5 @@
   roles:
     - common
     - ble
-#    - management
+    - management
 #    - sniffer

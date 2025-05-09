@@ -2,3 +2,5 @@
 .idea/
 .venv/
 requirements.txt
+ansible/inventory/group_vars/
+ansible/ansible.cfg

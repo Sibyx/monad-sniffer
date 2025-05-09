@@ -1,4 +1,8 @@
 ---
+- name: Set system hostname
+  become: true
+  command: hostnamectl set-hostname "{{ hostname }}"
+
 - name: Update APT cache
   apt:
     update_cache: yes
@@ -10,15 +14,25 @@
   register: upgrade_result
   notify: Reboot if needed
 
-- name: Install common packages
+- name: Install core packages
   apt:
     name:
       - git
       - python3-pip
       - unzip
       - curl
-      - systemd
-      - iw
-      - net-tools
-      - wireless-tools
+      - avahi-daemon
     state: present
+    update_cache: yes
+
+- name: Deploy Avahi service for mDNS discovery
+  template:
+    src: monad-sniffer.service.j2
+    dest: /etc/avahi/services/monad-sniffer.service
+    mode: '0644'
+
+- name: Ensure Avahi is running
+  systemd:
+    name: avahi-daemon
+    enabled: yes
+    state: started
