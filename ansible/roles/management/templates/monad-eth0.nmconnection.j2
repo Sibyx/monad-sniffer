@@ -1,0 +1,12 @@
+[connection]
+id=monad-eth0
+uuid=71a86c80-b8f8-4c2d-a9ec-1a4f27126e07
+type=ethernet
+interface-name={{ eth_iface }}
+
+[ipv4]
+address1={{ eth_static_ip }}/24
+method=manual
+
+[ipv6]
+method=ignore
