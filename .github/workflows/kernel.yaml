@@ -1,62 +1,119 @@
-name: Build RPI5 Kernel
+name: raspi-kernel-monad
 
 on:
   workflow_dispatch:
+    inputs:
+      kver:   { description: 'Kernel version', default: '6.8.0' }
+      pkgrel: { description: 'Ubuntu raspi release', default: '1028-raspi' }
+      tagrev: { description: 'Tag number (blank = -monad)', default: '' }
+  push:      { branches: [ master ] }
+  schedule:  [ { cron: '0 3 * * 1' } ]
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 180        # compiling a full kernel takes ~1-2 h
+    runs-on: self-hosted
+    env: {}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable source repositories & install build-deps
+      - id: v
+        name: vars
+        shell: bash
         run: |
-          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' \
-               /etc/apt/sources.list.d/ubuntu.sources
-          sudo apt-get update
+          KVER="${{ github.event.inputs.kver || '6.8.0' }}"
+          PKGREL="${{ github.event.inputs.pkgrel || '1028-raspi' }}"
+          INPUT_TAGREV="${{ github.event.inputs.tagrev }}"
+          if [[ -n "$INPUT_TAGREV" ]]; then
+            LOCALTAG="-monad${INPUT_TAGREV}"
+            CHANGELOCAL="+monad${INPUT_TAGREV}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            LOCALTAG="-monad"
+            CHANGELOCAL="+monad"
+          else
+            LOCALTAG="-monad${{ github.run_number }}"
+            CHANGELOCAL="+monad${{ github.run_number }}"
+          fi
+          FULL="${{ github.event.head_commit.author.name || github.actor }}"
+          MAIL="${{ github.event.head_commit.author.email || github.actor }}@users.noreply.github.com"
+          echo "KVER=$KVER"                >>$GITHUB_OUTPUT
+          echo "PKGREL=$PKGREL"            >>$GITHUB_OUTPUT
+          echo "LOCALTAG=$LOCALTAG"        >>$GITHUB_OUTPUT
+          echo "CHANGELOCAL=$CHANGELOCAL"  >>$GITHUB_OUTPUT
+          echo "DEBFULLNAME=$FULL"         >>$GITHUB_OUTPUT
+          echo "DEBEMAIL=$MAIL"            >>$GITHUB_OUTPUT
+          echo "BUILDDIR=${RUNNER_TEMP}/kernel-build" >>$GITHUB_OUTPUT
 
-          sudo apt-get install -y --no-install-recommends \
-               fakeroot build-essential bc bison flex \
-               libssl-dev libelf-dev dwarves cpio libncurses-dev devscripts
-          sudo apt-get build-dep -y linux-raspi
-
-      - name: Download kernel source
+      - name: export env
+        shell: bash
         run: |
-          apt-get source linux-raspi
+          echo "DEBFULLNAME=${{ steps.v.outputs.DEBFULLNAME }}" >>$GITHUB_ENV
+          echo "DEBEMAIL=${{ steps.v.outputs.DEBEMAIL }}"       >>$GITHUB_ENV
+          echo "BUILDDIR=${{ steps.v.outputs.BUILDDIR }}"       >>$GITHUB_ENV
+          mkdir -p "${{ steps.v.outputs.BUILDDIR }}"
 
-      # 4) Apply your config tweaks
-      - name: Configure Pi-5 kernel with extra Wi-Fi debug flags
+      - name: deps
+        shell: bash
         run: |
-          apt-get source linux-raspi
-          cd linux-*
-          cp debian/config/arm64/config.common.ubuntu .config
-          cat debian/config/arm64/config.flavour.raspi >> .config
+          apt update -y
+          apt upgrade -y
+          apt install -y build-essential fakeroot devscripts git
+          apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
-          ./scripts/config --set-str SYSTEM_TRUSTED_KEYS ""
-          ./scripts/config --set-str SYSTEM_REVOCATION_KEYS ""
-
-          ./scripts/config --enable NL80211_TESTMODE \
-                           --enable CFG80211_DEVELOPER_WARNINGS \
-                           --enable LIB80211_DEBUG \
-                           --enable MAC80211_DEBUG_MENU \
-                           --enable LIBIPW_DEBUG \
-                           --enable IWLWIFI_DEBUG
-          yes "" | make olddefconfig
-
-      - name: Compile & package
-        working-directory: ./linux-*
-        env:
-          KDEB_PKGVERSION: "rpi5-monad.${{ github.run_number }}"
-          LOCALVERSION: "-monad"
+      - name: source
+        shell: bash
         run: |
-          make -j$(nproc) bindeb-pkg \
-               LOCALVERSION=$LOCALVERSION \
-               KDEB_PKGVERSION=$KDEB_PKGVERSION
+          cd "$BUILDDIR"
+          apt source linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
-      - name: Upload kernel debs
-        uses: actions/upload-artifact@v4
+      - name: prep
+        shell: bash
+        run: |
+          cd "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}"
+          fakeroot debian/rules clean
+          make ARCH=arm64 mrproper
+          fakeroot debian/rules genconfigs
+
+      - name: config+tag
+        shell: bash
+        run: |
+          cd "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}"
+          ./scripts/config --file CONFIGS/arm64-config.flavour.raspi \
+            --set-str LOCALVERSION "${{ steps.v.outputs.LOCALTAG }}" \
+            --set-str SYSTEM_TRUSTED_KEYS "" \
+            --set-str SYSTEM_REVOCATION_KEYS "" \
+            --enable NL80211_TESTMODE \
+            --enable CFG80211_DEVELOPER_WARNINGS \
+            --enable LIB80211_DEBUG \
+            --enable MAC80211_DEBUG_MENU \
+            --enable LIBIPW_DEBUG \
+            --enable IWLWIFI_DEBUG
+          dch --local "${{ steps.v.outputs.CHANGELOCAL }}" "monad build"
+          echo "${{ steps.v.outputs.LOCALTAG }}" > debian/localversion.monad
+          fakeroot debian/rules updateconfigs
+
+      - name: overlays
+        shell: bash
+        run: |
+          cd "$BUILDDIR"
+          git clone --depth=1 --branch rpi-6.8.y https://github.com/raspberrypi/linux rpi
+          cp -a rpi/arch/arm64/boot/dts/overlays \
+            "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}/arch/arm64/boot/dts/"
+          rm -rf rpi
+
+      - name: build
+        shell: bash
+        run: |
+          cd "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}"
+          export DEB_BUILD_OPTIONS="parallel=$(nproc)"
+          fakeroot debian/rules binary-headers binary-raspi binary-perarch skipdbg=true skipabi=true
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: rpi5-kernel-debs
-          path: ../*.deb
+          name: debs${{ steps.v.outputs.LOCALTAG }}-${{ github.run_id }}
+          path: ${{ env.BUILDDIR }}/linux-raspi-${{ steps.v.outputs.KVER }}/*.deb
+
+      - name: cleanup
+        if: always()
+        shell: bash
+        run: rm -rf "$BUILDDIR"
