@@ -1,4 +1,4 @@
-name: raspi-kernel-monad
+name: Build Kernel as .deb packages
 
 on:
   workflow_dispatch:
