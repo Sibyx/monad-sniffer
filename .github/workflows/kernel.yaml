@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           cd "$BUILDDIR"
-          sudo apt source linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
+          apt source linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
       - name: prep
         shell: bash
