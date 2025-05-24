@@ -1,4 +1,4 @@
-name: Build Kernel as .deb packages
+name: Build Kernel as .deb packages (AWS)
 
 on:
   workflow_dispatch:
