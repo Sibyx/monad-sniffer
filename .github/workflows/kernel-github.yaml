@@ -63,7 +63,10 @@ jobs:
       - name: deps
         shell: bash
         run: |
-          sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          set -e
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          fi
           sudo apt update -y
           sudo apt install -y build-essential fakeroot devscripts git
           sudo apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
