@@ -1,0 +1,61 @@
+name: Build RPI5 Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180        # compiling a full kernel takes ~1-2 h
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable source repositories & install build-deps
+        run: |
+          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' \
+               /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+               fakeroot build-essential bc bison flex \
+               libssl-dev libelf-dev dwarves cpio libncurses-dev devscripts
+          sudo apt-get build-dep -y linux-raspi
+
+      - name: Download kernel source
+        run: |
+          apt-get source linux-raspi
+
+      # 4) Apply your config tweaks
+      - name: Configure Pi-5 kernel with extra Wi-Fi debug flags
+        working-directory: ./linux-*
+        run: |
+          cp debian/config/arm64/config.common.ubuntu .config
+          cat debian/config/arm64/config.flavour.raspi >> .config
+
+          ./scripts/config --set-str SYSTEM_TRUSTED_KEYS ""
+          ./scripts/config --set-str SYSTEM_REVOCATION_KEYS ""
+
+          ./scripts/config --enable NL80211_TESTMODE \
+                           --enable CFG80211_DEVELOPER_WARNINGS \
+                           --enable LIB80211_DEBUG \
+                           --enable MAC80211_DEBUG_MENU \
+                           --enable LIBIPW_DEBUG \
+                           --enable IWLWIFI_DEBUG
+          yes "" | make olddefconfig
+
+      - name: Compile & package
+        working-directory: ./linux-*
+        env:
+          KDEB_PKGVERSION: "rpi5-monad.${{ github.run_number }}"
+          LOCALVERSION: "-monad"
+        run: |
+          make -j$(nproc) bindeb-pkg \
+               LOCALVERSION=$LOCALVERSION \
+               KDEB_PKGVERSION=$KDEB_PKGVERSION
+
+      - name: Upload kernel debs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpi5-kernel-debs
+          path: ../*.deb
