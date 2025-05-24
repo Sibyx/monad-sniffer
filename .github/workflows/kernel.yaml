@@ -52,19 +52,19 @@ jobs:
           echo "BUILDDIR=${{ steps.v.outputs.BUILDDIR }}"       >>$GITHUB_ENV
           mkdir -p "${{ steps.v.outputs.BUILDDIR }}"
 
-      - name: deps
-        shell: bash
-        run: |
-          apt update -y
-          apt upgrade -y
-          apt install -y build-essential fakeroot devscripts git
-          apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
+#      - name: deps
+#        shell: bash
+#        run: |
+#          apt update -y
+#          apt upgrade -y
+#          apt install -y build-essential fakeroot devscripts git
+#          apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
       - name: source
         shell: bash
         run: |
           cd "$BUILDDIR"
-          apt source linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
+          sudo apt source linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
       - name: prep
         shell: bash
