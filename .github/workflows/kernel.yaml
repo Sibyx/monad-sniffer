@@ -28,8 +28,9 @@ jobs:
 
       # 4) Apply your config tweaks
       - name: Configure Pi-5 kernel with extra Wi-Fi debug flags
-        working-directory: ./linux-*
         run: |
+          apt-get source linux-raspi
+          cd linux-*
           cp debian/config/arm64/config.common.ubuntu .config
           cat debian/config/arm64/config.flavour.raspi >> .config
 
