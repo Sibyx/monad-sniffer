@@ -35,7 +35,7 @@ jobs:
             CHANGELOCAL="+monad${{ github.run_number }}"
           fi
           FULL="${{ github.event.head_commit.author.name || github.actor }}"
-          MAIL="${{ github.event.head_commit.author.email || github.actor }}@users.noreply.github.com"
+          MAIL="${{ github.event.head_commit.author.email || github.actor }}"
           echo "KVER=$KVER"                >>$GITHUB_OUTPUT
           echo "PKGREL=$PKGREL"            >>$GITHUB_OUTPUT
           echo "LOCALTAG=$LOCALTAG"        >>$GITHUB_OUTPUT
@@ -111,7 +111,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: debs${{ steps.v.outputs.LOCALTAG }}-${{ github.run_id }}
-          path: ${{ env.BUILDDIR }}/linux-raspi-${{ steps.v.outputs.KVER }}/*.deb
+          path: ${{ env.BUILDDIR }}/*.deb
 
       - name: cleanup
         if: always()
