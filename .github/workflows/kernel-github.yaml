@@ -69,7 +69,7 @@ jobs:
           fi
           sudo apt update -y
           sudo apt install -y build-essential fakeroot devscripts git rustc
-          sudo apt install build-essential fakeroot devscripts git gnupg lsb-release dwarves ncurses-dev flex bison libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm rustc cargo
+          sudo apt install build-essential fakeroot devscripts git gnupg lsb-release dwarves ncurses-dev flex bison libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm rustc cargo rust-src bindgen
           sudo apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
       - name: source
