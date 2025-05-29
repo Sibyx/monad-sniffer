@@ -19,8 +19,7 @@ on:
 
 jobs:
   build:
-#    runs-on: ubuntu-24.04-arm
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04-arm
     env: {}
 
     steps:

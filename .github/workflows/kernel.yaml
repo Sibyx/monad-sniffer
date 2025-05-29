@@ -1,13 +1,21 @@
-name: Build Kernel as .deb packages (AWS)
+name: Build Kernel as .deb packages (SelfHosted)
 
 on:
   workflow_dispatch:
     inputs:
-      kver:   { description: 'Kernel version', default: '6.8.0' }
-      pkgrel: { description: 'Ubuntu raspi release', default: '1028-raspi' }
-      tagrev: { description: 'Tag number (blank = -monad)', default: '' }
-  push:      { branches: [ master ] }
-  schedule:  [ { cron: '0 3 * * 1' } ]
+      kver:
+        description: "Kernel version"
+        default: "6.8.0"
+      pkgrel:
+        description: "Ubuntu raspi release"
+        default: "1028-raspi"
+      tagrev:
+        description: "Tag number (blank = dev only)"
+        default: ""
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: "0 3 * * 1"
 
 jobs:
   build:
@@ -17,68 +25,62 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: v
-        name: vars
+      - id: vars
+        name: Set variables
         shell: bash
         run: |
-          KVER="${{ github.event.inputs.kver || '6.8.0' }}"
-          PKGREL="${{ github.event.inputs.pkgrel || '1028-raspi' }}"
-          INPUT_TAGREV="${{ github.event.inputs.tagrev }}"
-          if [[ -n "$INPUT_TAGREV" ]]; then
-            LOCALTAG="-monad${INPUT_TAGREV}"
-            CHANGELOCAL="+monad${INPUT_TAGREV}"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            LOCALTAG="-monad"
-            CHANGELOCAL="+monad"
+          KVER="${{ github.event.inputs.kver }}"
+          PKGREL="${{ github.event.inputs.pkgrel }}"
+          TAGREV="${{ github.event.inputs.tagrev }}"
+          if [[ -n "$TAGREV" ]]; then
+            BUILD_NO="$TAGREV"
           else
-            LOCALTAG="-monad${{ github.run_number }}"
-            CHANGELOCAL="+monad${{ github.run_number }}"
+            BUILD_NO="${{ github.run_number }}"
           fi
+          LOCALTAG="-monad.${BUILD_NO}"
+          CHANGELOCAL="+monad.${BUILD_NO}"
           FULL="${{ github.event.head_commit.author.name || github.actor }}"
           MAIL="${{ github.event.head_commit.author.email || github.actor }}"
-          echo "KVER=$KVER"                >>$GITHUB_OUTPUT
-          echo "PKGREL=$PKGREL"            >>$GITHUB_OUTPUT
-          echo "LOCALTAG=$LOCALTAG"        >>$GITHUB_OUTPUT
-          echo "CHANGELOCAL=$CHANGELOCAL"  >>$GITHUB_OUTPUT
-          echo "DEBFULLNAME=$FULL"         >>$GITHUB_OUTPUT
-          echo "DEBEMAIL=$MAIL"            >>$GITHUB_OUTPUT
-          echo "BUILDDIR=${RUNNER_TEMP}/kernel-build" >>$GITHUB_OUTPUT
+          echo "KVER=$KVER"               >> $GITHUB_OUTPUT
+          echo "PKGREL=$PKGREL"           >> $GITHUB_OUTPUT
+          echo "BUILD_NO=$BUILD_NO"       >> $GITHUB_OUTPUT
+          echo "LOCALTAG=$LOCALTAG"       >> $GITHUB_OUTPUT
+          echo "CHANGELOCAL=$CHANGELOCAL" >> $GITHUB_OUTPUT
+          echo "DEBFULLNAME=$FULL"        >> $GITHUB_OUTPUT
+          echo "DEBEMAIL=$MAIL"           >> $GITHUB_OUTPUT
+          echo "BUILDDIR=${RUNNER_TEMP}/kernel-build" >> $GITHUB_OUTPUT
 
-      - name: export env
-        shell: bash
+      - name: Export env
         run: |
-          echo "DEBFULLNAME=${{ steps.v.outputs.DEBFULLNAME }}" >>$GITHUB_ENV
-          echo "DEBEMAIL=${{ steps.v.outputs.DEBEMAIL }}"       >>$GITHUB_ENV
-          echo "BUILDDIR=${{ steps.v.outputs.BUILDDIR }}"       >>$GITHUB_ENV
-          mkdir -p "${{ steps.v.outputs.BUILDDIR }}"
+          echo "DEBFULLNAME=${{ steps.vars.outputs.DEBFULLNAME }}" >> $GITHUB_ENV
+          echo "DEBEMAIL=${{ steps.vars.outputs.DEBEMAIL }}"       >> $GITHUB_ENV
+          echo "BUILDDIR=${{ steps.vars.outputs.BUILDDIR }}"       >> $GITHUB_ENV
+          mkdir -p "${{ steps.vars.outputs.BUILDDIR }}"
 
-#      - name: deps
+#      - name: Install build deps
 #        shell: bash
 #        run: |
-#          apt update -y
-#          apt upgrade -y
-#          apt install -y build-essential fakeroot devscripts git
-#          apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
+#          set -e
+#          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+#            sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+#          fi
+#          sudo apt update -y
+#          sudo apt install build-essential fakeroot devscripts git gnupg lsb-release dwarves ncurses-dev flex bison libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm rustc cargo rust-src bindgen
+#          sudo apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
 
-      - name: source
-        shell: bash
+      - name: Get source
         run: |
           cd "$BUILDDIR"
-          apt source linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
+          apt source linux-image-${{ steps.vars.outputs.KVER }}-${{ steps.vars.outputs.PKGREL }}
 
-      - name: prep
-        shell: bash
+      - name: Prep & config
         run: |
-          cd "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}"
+          cd "$BUILDDIR/linux-raspi-${{ steps.vars.outputs.KVER }}"
           fakeroot debian/rules clean
           make ARCH=arm64 mrproper
           fakeroot debian/rules genconfigs
-
-      - name: config+tag
-        shell: bash
-        run: |
-          cd "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}"
           ./scripts/config --file CONFIGS/arm64-config.flavour.raspi \
+            --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str LOCALVERSION "${{ steps.v.outputs.LOCALTAG }}" \
             --set-str SYSTEM_TRUSTED_KEYS "" \
             --set-str SYSTEM_REVOCATION_KEYS "" \
@@ -88,32 +90,82 @@ jobs:
             --enable MAC80211_DEBUG_MENU \
             --enable LIBIPW_DEBUG \
             --enable IWLWIFI_DEBUG
-          dch --local "${{ steps.v.outputs.CHANGELOCAL }}" "monad build"
-          echo "${{ steps.v.outputs.LOCALTAG }}" > debian/localversion.monad
+          dch --local "${{ steps.vars.outputs.CHANGELOCAL }}" "monad build"
+          echo "${{ steps.vars.outputs.LOCALTAG }}" > debian/localversion.monad
           fakeroot debian/rules updateconfigs
 
-      - name: overlays
-        shell: bash
+      - name: Overlay DTS
         run: |
           cd "$BUILDDIR"
           git clone --depth=1 --branch rpi-6.8.y https://github.com/raspberrypi/linux rpi
           cp -a rpi/arch/arm64/boot/dts/overlays \
-            "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}/arch/arm64/boot/dts/"
+             "$BUILDDIR/linux-raspi-${{ steps.vars.outputs.KVER }}/arch/arm64/boot/dts/"
           rm -rf rpi
 
-      - name: build
-        shell: bash
+
+      - name: Build .debs
         run: |
-          cd "$BUILDDIR/linux-raspi-${{ steps.v.outputs.KVER }}"
+          cd "$BUILDDIR/linux-raspi-${{ steps.vars.outputs.KVER }}"
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           fakeroot debian/rules binary-headers binary-raspi binary-perarch skipdbg=true skipabi=true
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: debs${{ steps.v.outputs.LOCALTAG }}-${{ github.run_id }}
+          name: debs-${{ steps.vars.outputs.LOCALTAG }}
           path: ${{ env.BUILDDIR }}/*.deb
 
       - name: cleanup
         if: always()
         shell: bash
         run: rm -rf "$BUILDDIR"
+
+  publish-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: debs-${{ needs.build.outputs.localtag }}
+      - name: Create or update “dev” release
+        id: devrel
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: monad-dev
+          name: Monad Dev Build
+          body: |
+            Automated development kernel build:
+            **${{ needs.build.outputs.kver }}-${{ needs.build.outputs.pkgrel }}${{ needs.build.outputs.localtag }}**
+          draft: false
+          prerelease: true
+      - name: Upload .deb assets to dev release
+        uses: softprops/action-gh-release@v1
+        with:
+          upload_url: ${{ steps.devrel.outputs.upload_url }}
+          files: '*.deb'
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tagrev != '' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: debs-${{ needs.build.outputs.localtag }}
+      - name: Create versioned release
+        id: tagrel
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build.outputs.kver }}-monad.${{ needs.build.outputs.buildno }}
+          name: Kernel ${{ needs.build.outputs.kver }}-monad.${{ needs.build.outputs.buildno }}
+          body: |
+            Official monad release:
+            **${{ needs.build.outputs.kver }}-${{ needs.build.outputs.pkgrel }}+monad.${{ needs.build.outputs.buildno }}**
+          draft: false
+          prerelease: false
+      - name: Upload .deb assets to versioned release
+        uses: softprops/action-gh-release@v1
+        with:
+          upload_url: ${{ steps.tagrel.outputs.upload_url }}
+          files: '*.deb'
