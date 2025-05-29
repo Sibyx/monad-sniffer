@@ -20,7 +20,10 @@ on:
 jobs:
   build:
     runs-on: self-hosted
-    env: {}
+
+    env:
+      DEFAULT_KVER: 6.8.0
+      DEFAULT_PKGREL: 1028-raspi
 
     steps:
       - uses: actions/checkout@v4

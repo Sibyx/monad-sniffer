@@ -20,7 +20,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
-    env: {}
+
+    env:
+      DEFAULT_KVER: 6.8.0
+      DEFAULT_PKGREL: 1028-raspi
 
     steps:
       - uses: actions/checkout@v4
@@ -29,8 +32,8 @@ jobs:
         name: Set variables
         shell: bash
         run: |
-          KVER="${{ github.event.inputs.kver }}"
-          PKGREL="${{ github.event.inputs.pkgrel }}"
+          KVER="${{ github.event.inputs.kver  || env.DEFAULT_KVER }}"
+          PKGREL="${{ github.event.inputs.pkgrel || env.DEFAULT_PKGREL }}"
           TAGREV="${{ github.event.inputs.tagrev }}"
           if [[ -n "$TAGREV" ]]; then
             BUILD_NO="$TAGREV"
