@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: vars
+      - id: v
         name: Set variables
         shell: bash
         run: |
