@@ -32,8 +32,8 @@ jobs:
         name: Set variables
         shell: bash
         run: |
-          KVER="${{ github.event.inputs.kver }}"
-          PKGREL="${{ github.event.inputs.pkgrel }}"
+          KVER="${{ github.event.inputs.kver  || env.DEFAULT_KVER }}"
+          PKGREL="${{ github.event.inputs.pkgrel || env.DEFAULT_PKGREL }}"
           TAGREV="${{ github.event.inputs.tagrev }}"
           if [[ -n "$TAGREV" ]]; then
             BUILD_NO="$TAGREV"
