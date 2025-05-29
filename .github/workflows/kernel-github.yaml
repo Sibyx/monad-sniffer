@@ -83,6 +83,7 @@ jobs:
           make ARCH=arm64 mrproper
           fakeroot debian/rules genconfigs
           ./scripts/config --file CONFIGS/arm64-config.flavour.raspi \
+            --enable RUST_IS_AVAILABLE \
             --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str SYSTEM_TRUSTED_KEYS "" \
