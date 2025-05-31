@@ -79,6 +79,7 @@ jobs:
       - name: Prep & config
         run: |
           cd "$BUILDDIR/linux-raspi-${{ steps.vars.outputs.KVER }}"
+          echo 'CONFIG_RUST_IS_AVAILABLE=y' >> CONFIGS/arm64-config.flavour.raspi
           fakeroot debian/rules clean
           make ARCH=arm64 mrproper
           fakeroot debian/rules genconfigs
