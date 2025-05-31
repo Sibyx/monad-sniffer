@@ -160,6 +160,7 @@ jobs:
         id: tagrel
         uses: softprops/action-gh-release@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ needs.build.outputs.kver }}-monad.${{ needs.build.outputs.buildno }}
           name: Kernel ${{ needs.build.outputs.kver }}-monad.${{ needs.build.outputs.buildno }}
           body: |
@@ -168,8 +169,9 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload .deb assets to versioned release
+      - name: Upload .deb assets to “v${{ needs.build.outputs.kver }}-monad.${{ needs.build.outputs.buildno }}” release
         uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.tagrel.outputs.upload_url }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ needs.build.outputs.kver }}-monad.${{ needs.build.outputs.buildno }}
           files: '*.deb'
