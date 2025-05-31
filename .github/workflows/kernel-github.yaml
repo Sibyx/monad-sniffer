@@ -74,7 +74,7 @@ jobs:
             sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
           fi
           sudo apt update -y
-          sudo apt install build-essential fakeroot devscripts git gnupg lsb-release dwarves ncurses-dev flex bison libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm rustc cargo rust-src bindgen
+          sudo apt install build-essential fakeroot devscripts git gnupg lsb-release dwarves ncurses-dev flex bison libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm rustc cargo rust-src bindgen clang
           sudo apt build-dep -y linux-image-${{ steps.vars.outputs.KVER }}-${{ steps.vars.outputs.PKGREL }}
 
       - name: Get source
@@ -88,8 +88,7 @@ jobs:
           fakeroot debian/rules clean
           make ARCH=arm64 mrproper
           fakeroot debian/rules genconfigs
-          ./scripts/config --file debian.raspi/CONFIGS/arm64-config.flavour.raspi \
-            --enable RUST_IS_AVAILABLE \
+          ./scripts/config --file CONFIGS/arm64-config.flavour.raspi \
             --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str SYSTEM_TRUSTED_KEYS "" \
