@@ -99,6 +99,11 @@ jobs:
             --enable MAC80211_DEBUG_MENU \
             --enable LIBIPW_DEBUG \
             --enable IWLWIFI_DEBUG
+
+          ./scripts/config --enable RUST
+          ./scripts/config --enable RUST_MODULES
+          ./scripts/config --enable RUST_IS_ENABLED || true
+
           dch --local "${{ steps.vars.outputs.CHANGELOCAL }}" "monad build"
           echo "${{ steps.vars.outputs.LOCALTAG }}" > debian/localversion.monad
           fakeroot debian/rules updateconfigs
