@@ -21,6 +21,12 @@ jobs:
   build:
     runs-on: self-hosted
 
+    outputs:
+      kver: ${{ steps.vars.outputs.KVER }}
+      pkgrel: ${{ steps.vars.outputs.PKGREL }}
+      buildno: ${{ steps.vars.outputs.BUILD_NO }}
+      localtag: ${{ steps.vars.outputs.LOCALTAG }}
+
     env:
       DEFAULT_KVER: 6.8.0
       DEFAULT_PKGREL: 1028-raspi
@@ -115,7 +121,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: debs-${{ steps.vars.outputs.LOCALTAG }}
+          name: debs-kernel-${{ steps.vars.outputs.LOCALTAG }}
           path: ${{ env.BUILDDIR }}/*.deb
 
       - name: cleanup
@@ -130,7 +136,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: debs-${{ needs.build.outputs.localtag }}
+          name: debs-kernel-${{ needs.build.outputs.LOCALTAG }}
       - name: Create or update “dev” release
         id: devrel
         uses: softprops/action-gh-release@v1
