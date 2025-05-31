@@ -87,8 +87,8 @@ jobs:
           cd "$BUILDDIR/linux-raspi-${{ steps.vars.outputs.KVER }}"
           fakeroot debian/rules clean
           make ARCH=arm64 mrproper
-          echo 'CONFIG_RUST_IS_AVAILABLE=y' >> CONFIGS/arm64-config.flavour.raspi
           fakeroot debian/rules genconfigs
+          echo 'CONFIG_RUST_IS_AVAILABLE=y' >> CONFIGS/arm64-config.flavour.raspi
           ./scripts/config --file CONFIGS/arm64-config.flavour.raspi \
             --enable RUST_IS_AVAILABLE \
             --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
