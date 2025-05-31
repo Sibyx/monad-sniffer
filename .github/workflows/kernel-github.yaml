@@ -12,10 +12,6 @@ on:
       tagrev:
         description: "Tag number (blank = dev only)"
         default: ""
-  push:
-    branches: [ master ]
-  schedule:
-    - cron: "0 3 * * 1"
 
 jobs:
   build:
