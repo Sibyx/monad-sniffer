@@ -22,9 +22,9 @@ jobs:
     runs-on: self-hosted
 
     outputs:
-      kver: ${{ steps.vars.outputs.KVER }}
-      pkgrel: ${{ steps.vars.outputs.PKGREL }}
-      buildno: ${{ steps.vars.outputs.BUILD_NO }}
+      kver:     ${{ steps.vars.outputs.KVER }}
+      pkgrel:   ${{ steps.vars.outputs.PKGREL }}
+      buildno:  ${{ steps.vars.outputs.BUILD_NO }}
       localtag: ${{ steps.vars.outputs.LOCALTAG }}
 
     env:
@@ -66,17 +66,6 @@ jobs:
           echo "BUILDDIR=${{ steps.vars.outputs.BUILDDIR }}"       >> $GITHUB_ENV
           mkdir -p "${{ steps.vars.outputs.BUILDDIR }}"
 
-#      - name: Install build deps
-#        shell: bash
-#        run: |
-#          set -e
-#          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-#            sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-#          fi
-#          sudo apt update -y
-#          sudo apt install build-essential fakeroot devscripts git gnupg lsb-release dwarves ncurses-dev flex bison libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm rustc cargo rust-src bindgen
-#          sudo apt build-dep -y linux-image-${{ steps.v.outputs.KVER }}-${{ steps.v.outputs.PKGREL }}
-
       - name: Get source
         run: |
           cd "$BUILDDIR"
@@ -89,7 +78,6 @@ jobs:
           make ARCH=arm64 mrproper
           fakeroot debian/rules genconfigs
           ./scripts/config --file CONFIGS/arm64-config.flavour.raspi \
-            --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str LOCALVERSION "${{ steps.vars.outputs.LOCALTAG }}" \
             --set-str SYSTEM_TRUSTED_KEYS "" \
             --set-str SYSTEM_REVOCATION_KEYS "" \
@@ -110,7 +98,6 @@ jobs:
           cp -a rpi/arch/arm64/boot/dts/overlays \
              "$BUILDDIR/linux-raspi-${{ steps.vars.outputs.KVER }}/arch/arm64/boot/dts/"
           rm -rf rpi
-
 
       - name: Build .debs
         run: |
@@ -134,9 +121,11 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download kernel .deb artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: debs-kernel-${{ needs.build.outputs.LOCALTAG }}
+          name: debs-kernel-${{ needs.build.outputs.localtag }}
+
       - name: Create or update “dev” release
         id: devrel
         uses: softprops/action-gh-release@v1
@@ -159,9 +148,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tagrev != '' }}
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download kernel .deb artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: debs-${{ needs.build.outputs.localtag }}
+          name: debs-kernel-${{ needs.build.outputs.localtag }}
+
       - name: Create versioned release
         id: tagrel
         uses: softprops/action-gh-release@v1
@@ -173,6 +164,7 @@ jobs:
             **${{ needs.build.outputs.kver }}-${{ needs.build.outputs.pkgrel }}+monad.${{ needs.build.outputs.buildno }}**
           draft: false
           prerelease: false
+
       - name: Upload .deb assets to versioned release
         uses: softprops/action-gh-release@v1
         with:
